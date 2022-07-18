@@ -1,44 +1,59 @@
 <?php
-require_once("baza.class.php");
-require_once("validator.class.php");
-require_once("podaci.class.php");
+require_once("database.php");
+require_once("validator.php");
+require_once("data.php");
 
-$baza = new Baza();
-$baza->spojiDB();
-$validator = new Validator;
+$database = new Database();
+$database->connectDB();
+$validator = new Validator();
+$fetchData = new Data();
 
-if(isset($_GET["lang"])){
-	try{
-		if(isset($_GET["page"])) {
-			$validator->jeBroj($_GET["page"]);
-			$validator->isNegative($_GET["page"]);
-		}		
-		if(isset($_GET["page"])) {
-			$validator->jeBroj($_GET["per_page"]);
-			$validator->isNegative($_GET["per_page"]);
+if (isset($_GET["lang"])) {
+	try {
+		$per_page = null;
+		$tags = array();
+		$with = array();
+		$category = "none";
+		$diff_time = null;
+		$page = null;
+
+		if ($validator->validString($_GET["lang"], "lang") && $validator->isLang($_GET["lang"])) {
+			$lang = $_GET["lang"];
 		}
-		$validator->validString($_GET["tag"]);
-		$validator->validString($_GET["lang"]);
-		$validator->validString($_GET["c"]);
-		$validator->validateDate($_GET["diff_time"]);
-		$validator->validString($_GET["diff_time"]);
 
-		$upravljanjePodacima=new Podaci;
+		if (isset($_GET["per_page"]) && $validator->isNum($_GET["per_page"], "per_page") && $validator->isPositive($_GET["per_page"], "per_page")) {
+			$per_page = $_GET["per_page"];
+		}
 
-		if(!isset($_GET["page"])) $_GET["page"]=NULL;
-		if(!isset($_GET["per_page"])) $_GET["per_page"]=NULL;
-		if(!isset($_GET["tags"])) $_GET["tags"]=NULL;
-		if(!isset($_GET["ingredients"])) $_GET["ingredients"]=NULL;
-		if(!isset($_GET["category"])) $_GET["category"]=NULL;
-		if(!isset($_GET["tag"])) $_GET["tag"]=NULL;
-		if(!isset($_GET["c"])) $_GET["c"]=NULL;
+		if (isset($_GET["tags"]) && $validator->validString($_GET["tags"], "tags")) {
+			$tags = $validator->validTags($_GET["tags"]);
+		}
 
-		echo $upravljanjePodacima->dohvatiPodatke($_GET["page"], $_GET["per_page"], $_GET["tags"], $_GET["ingredients"], $_GET["category"], $_GET["tag"], $_GET["c"], $_GET["diff_time"],  $_GET["lang"]);	
-	}
-	catch (Exception $e){
+		if (isset($_GET["with"]) && $validator->validString($_GET["with"], "with")) {
+			$with = $validator->validWith($_GET["with"]);
+		}
+
+		if (isset($_GET["category"])) {
+			if ($validator->isNull($_GET["category"])) {
+				$category = strtolower($_GET["category"]);
+			} else if ($validator->isNum($_GET["category"], "category") && $validator->isPositive($_GET["category"], "category")) {
+				$category = strtolower($_GET["category"]);
+			}
+		}
+
+		if (isset($_GET["diff_time"]) && $validator->validString($_GET["diff_time"], "diff_time") && $validator->validDate($_GET["diff_time"])) {
+			$diff_time = $_GET["diff_time"];
+		}
+
+		if (isset($_GET["page"]) && $validator->isNum($_GET["page"], "page") && $validator->isPositive($_GET["page"], "page")) {
+			$page = $_GET["page"];
+		}
+
+		echo $fetchData->fetchData($lang, $per_page, $tags, $with, $category, $diff_time, $page);
+
+	} catch (Exception $e) {
 		echo $e->getMessage();
 	}	
+} else{
+	echo "Parameter 'lang' has to be set!";
 }
-
-$baza->zatvoriDB();
-?>
